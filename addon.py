@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-# Copyright 2014 Leo Moll
+# Derived from https://github.com/tuxpoldo/fhem-xbmc/blob/master/addon.py
+#   Copyright 2014 Leo Moll
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -21,7 +22,7 @@ import xbmc,xbmcplugin,xbmcgui,xbmcaddon
 import httplib
 
 # -- Constants ----------------------------------------------
-ADDON_ID = 'service.fhemcinema'
+ADDON_ID = 'service.simpleshow'
 
 # -- Settings -----------------------------------------------
 settings = xbmcaddon.Addon(id=ADDON_ID)
@@ -38,29 +39,7 @@ class FhemHandler(xbmc.Player):
 		xbmc.Player.__init__(self)
 		self.isplayingvideo = False;
 
-	def isDayTime(self):
-		try:
-			nowTime=datetime.datetime.now().time()
-			xbmc.log ('nowTime: {0}:{1}'.format(nowTime.hour, nowTime.minute))
-			fromTime=settings.getSetting('daytimefrom')
-			toTime=settings.getSetting('daytimeto')
-			tmp=fromTime.split(':')
-			t1=datetime.time(int(tmp[0]),int(tmp[1]))
-			tmp=toTime.split(':')
-			t2=datetime.time(int(tmp[0]),int(tmp[1]))
-			if t1 < t2:
-				return nowTime >= t1 and nowTime <= t2
-			else:
-				return nowTime >= t2 or nowTime <= t1
-		except Exception as e:
-			# this should not really happen...
-			xbmc.log('Cinema: Exception in isDayTime: '+str(e),xbmc.LOGERROR)
-			return False
-
-	def getCommand(self,command):
-		if settings.getSetting('daytimeenable') == "true":
-			if self.isDayTime():
-				return settings.getSetting(command+'dt')
+	def getCommand(self,command):  # removed stuff about day vs night  do we need this at all?
 		return settings.getSetting(command)
 
 	def SendCommand(self,command):
@@ -86,25 +65,9 @@ class FhemHandler(xbmc.Player):
 		if type(ccusystemvar) is str and len(ccusystemvar) > 0:
 			hostname = settings.getSetting('hostname')
 			xbmc.log ('Sending command to CCU '+hostname+': '+command)
+			
+			state = 0
 
-			if command == "onstartup":
-				state = 1
-			elif command == "onshutdown":
-				state = 2
-			elif command == "onaudioplay":
-				state = 3
-			elif command == "onvideoplay":
-				state = 4
-			elif command == "onaudiostop":
-				state = 5
-			elif command == "onvideostop":
-				state = 6
-			elif command == "onaudiopause":
-				state = 7
-			elif command == "onvideopause":
-				state = 8
-			else:
-				state = 0
 			connection = httplib.HTTPConnection(hostname,8181,timeout=10)
 			connection.connect();
 			connection.set_debuglevel(9);
@@ -134,6 +97,7 @@ class FhemHandler(xbmc.Player):
 		xbmc.log('Cinema shut down')
 
 	def onPlayBackStarted(self):
+		# Find file with show/effects
 		if xbmc.Player().isPlayingAudio():
 			self.SendCommand('onaudioplay')
 		else:
